@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TecGame — Gamificação para Cursos Técnicos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f8f7f4;--surface:#fff;--border:rgba(0,0,0,.1);--border-strong:rgba(0,0,0,.2);
+  --text:#1a1a18;--text-muted:#6b6b67;--text-hint:#9a9a96;
+  --purple:#534AB7;--purple-light:#EEEDFE;--purple-text:#3C3489;
+  --teal:#1D9E75;--teal-light:#E1F5EE;--teal-text:#085041;
+  --amber:#BA7517;--amber-light:#FAEEDA;--amber-text:#633806;
+  --coral:#D85A30;--coral-light:#FAECE7;--coral-text:#712B13;
+  --blue:#1A6FBF;--blue-light:#E6F1FB;--blue-text:#0C447C;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1a1a18;--surface:#242422;--border:rgba(255,255,255,.1);--border-strong:rgba(255,255,255,.2);
+  --text:#e8e6de;--text-muted:#9a9a96;--text-hint:#6b6b67;
+  --purple-light:#26215C;--purple-text:#AFA9EC;--teal-light:#04342C;--teal-text:#9FE1CB;
+  --amber-light:#412402;--amber-text:#FAC775;--coral-light:#4A1B0C;--coral-text:#F0997B;
+  --blue-light:#0C2A45;--blue-text:#7ABAEE;
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;min-height:100vh}
+
+/* ── Auth ── */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+.auth-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.auth-logo{font-size:22px;font-weight:600;color:var(--purple);margin-bottom:.25rem}
+.auth-sub{font-size:14px;color:var(--text-muted);margin-bottom:1.5rem}
+.auth-tabs{display:flex;gap:4px;background:var(--bg);border-radius:var(--radius);padding:3px;margin-bottom:1.25rem}
+.auth-tab{flex:1;padding:.4rem;border:none;border-radius:6px;background:none;font-size:13px;color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s}
+.auth-tab.active{background:var(--surface);color:var(--text);font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* ── App layout ── */
+#app-screen{display:none}
+.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:.5px solid var(--border);padding:1.25rem 1rem;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-logo{font-size:17px;font-weight:600;color:var(--purple);padding:0 .5rem .75rem;border-bottom:.5px solid var(--border);margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between}
+.sidebar-logo span{font-size:11px;font-weight:400;color:var(--text-muted);cursor:pointer;padding:2px 6px;border-radius:4px;border:.5px solid var(--border)}
+.sidebar-logo span:hover{background:var(--bg)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:.5rem .75rem;border-radius:var(--radius);cursor:pointer;font-size:14px;color:var(--text-muted);transition:background .15s,color .15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--purple-light);color:var(--purple-text);font-weight:500}
+.sidebar-email{font-size:11px;color:var(--text-hint);padding:.5rem;margin-top:auto;word-break:break-all}
+
+/* ── Turma bar ── */
+.turma-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border-bottom:.5px solid var(--border);padding:.6rem 2rem;position:sticky;top:0;z-index:10;flex-wrap:wrap}
+.turma-bar label{font-size:13px;color:var(--text-muted);white-space:nowrap;margin:0}
+.turma-bar select{width:200px;padding:.35rem .65rem;font-size:13px}
+
+/* ── Main ── */
+.main-wrap{display:flex;flex-direction:column;min-height:100vh;overflow:auto}
+.main{padding:2rem;max-width:940px}
+.page{display:none}.page.active{display:block}
+
+/* ── Typography ── */
+h1{font-size:22px;font-weight:500;margin-bottom:.3rem}
+h2{font-size:16px;font-weight:500;margin-bottom:.75rem}
+.subtitle{font-size:14px;color:var(--text-muted);margin-bottom:1.5rem}
+.card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+.sec-label{font-size:11px;font-weight:500;color:var(--text-hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat-card{background:var(--bg);border-radius:var(--radius);padding:.9rem 1rem}
+.stat-label{font-size:12px;color:var(--text-muted);margin-bottom:3px}
+.stat-val{font-size:26px;font-weight:500}
+.stat-val.purple{color:var(--purple)}.stat-val.amber{color:var(--amber)}.stat-val.teal{color:var(--teal)}
+
+/* ── Forms ── */
+label{font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px}
+input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{width:100%;padding:.5rem .75rem;border:.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--purple)}
+textarea{resize:vertical;min-height:70px}
+.field{margin-bottom:12px}
+button{padding:.5rem 1rem;border:.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:14px;font-family:inherit;cursor:pointer;transition:background .15s}
+button:hover{background:var(--bg)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--purple);color:#fff;border-color:var(--purple);font-weight:500}
+.btn-primary:hover{background:var(--purple-text);border-color:var(--purple-text)}
+.btn-danger{color:var(--coral-text);border-color:var(--coral)}
+.btn-danger:hover{background:var(--coral-light)}
+.btn-sm{padding:.32rem .7rem;font-size:13px}
+.btn-block{width:100%;margin-top:.5rem}
+
+/* ── XP / Ranks ── */
+.xp-bar-bg{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;margin:5px 0 3px;border:.5px solid var(--border)}
+.xp-bar-fill{height:100%;background:var(--purple);border-radius:99px;transition:width .4s}
+.rank-badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:99px}
+.rank-1{background:var(--teal-light);color:var(--teal-text)}
+.rank-2{background:var(--blue-light);color:var(--blue-text)}
+.rank-3{background:var(--amber-light);color:var(--amber-text)}
+.rank-4{background:var(--purple-light);color:var(--purple-text)}
+.rank-5{background:var(--coral-light);color:var(--coral-text)}
+
+/* ── Missão actions ── */
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.action-btn{display:flex;align-items:center;gap:8px;padding:.6rem .8rem;border:.5px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;color:var(--text);transition:background .15s;text-align:left;width:100%}
+.action-btn:hover{background:var(--bg)}
+.pts-earn{font-size:12px;font-weight:500;color:var(--teal-text);margin-left:auto;white-space:nowrap}
+
+/* ── Categoria tabs ── */
+.cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cat-tab{padding:.3rem .85rem;border:.5px solid var(--border);border-radius:99px;font-size:13px;cursor:pointer;background:var(--surface);color:var(--text-muted);transition:all .15s}
+.cat-tab.active{background:var(--purple-light);color:var(--purple-text);border-color:var(--purple-light);font-weight:500}
+
+/* ── Shop ── */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.shop-item{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.85rem;cursor:pointer;transition:border-color .15s}
+.shop-item:hover{border-color:var(--border-strong)}
+.shop-item.disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
+.shop-item-name{font-size:13px;font-weight:500;margin-bottom:3px}
+.shop-item-desc{font-size:11px;color:var(--text-muted);margin-bottom:6px;line-height:1.4}
+.shop-item-price{font-size:12px;font-weight:500;color:var(--amber)}
+
+/* ── Table ── */
+.data-table{width:100%;border-collapse:collapse;font-size:14px}
+.data-table th{text-align:left;font-size:11px;font-weight:500;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em;padding:.5rem .75rem;border-bottom:.5px solid var(--border)}
+.data-table td{padding:.6rem .75rem;border-bottom:.5px solid var(--border);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--bg)}
+.aluno-avatar{width:30px;height:30px;border-radius:50%;background:var(--purple-light);color:var(--purple-text);font-size:13px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ── Log ── */
+.log-list{display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto}
+.log-entry{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);padding:4px 0;border-bottom:.5px solid var(--border)}
+.log-entry:last-child{border-bottom:none}
+.log-earn{font-weight:500;color:var(--teal-text)}.log-spend{font-weight:500;color:var(--coral-text)}
+.log-note{font-weight:500;color:var(--blue-text)}
+
+/* ── Feedback / notas ── */
+.nota-card{background:var(--blue-light);border:.5px solid var(--border);border-radius:var(--radius);padding:.75rem 1rem;margin-bottom:8px}
+.nota-text{font-size:13px;color:var(--text);margin-bottom:4px}
+.nota-meta{font-size:11px;color:var(--text-muted)}
+
+/* ── AI generator ── */
+.result-block{background:var(--bg);border-radius:var(--radius);padding:1rem;font-size:14px;line-height:1.7;white-space:pre-wrap;margin-bottom:10px}
+.prompt-box{font-family:'Courier New',monospace;font-size:11px;color:var(--text-muted);background:var(--bg);border-radius:var(--radius);padding:.85rem;white-space:pre-wrap;line-height:1.5;border:.5px solid var(--border);max-height:200px;overflow-y:auto}
+.tag{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:99px;margin:2px}
+.tag-purple{background:var(--purple-light);color:var(--purple-text)}.tag-amber{background:var(--amber-light);color:var(--amber-text)}
+.tag-teal{background:var(--teal-light);color:var(--teal-text)}.tag-coral{background:var(--coral-light);color:var(--coral-text)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border-strong);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:6px}
+.spinner-lg{width:28px;height:28px;border-width:3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:#FCEBEB;border:.5px solid #F09595;border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;color:#791F1F;margin-bottom:10px}
+.key-status{font-size:12px;padding:.32rem .7rem;border-radius:var(--radius);font-weight:500}
+.key-ok{background:var(--teal-light);color:var(--teal-text)}.key-missing{background:var(--coral-light);color:var(--coral-text)}
+
+/* ── Ficha ── */
+.ficha-avatar{width:52px;height:52px;border-radius:50%;background:var(--purple-light);color:var(--purple-text);font-size:22px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;padding:1rem}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.5rem;width:100%;max-width:460px;box-shadow:0 8px 32px rgba(0,0,0,.18);transform:translateY(8px);transition:transform .2s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal h3{font-size:16px;font-weight:500;margin-bottom:1rem}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem}
+
+/* ── Loading ── */
+#loading-overlay{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#loading-overlay p{font-size:14px;color:var(--text-muted)}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--text);color:var(--surface);font-size:13px;padding:8px 18px;border-radius:99px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:99px}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay"><span class="spinner spinner-lg"></span><p>Carregando...</p></div>
+<div id="toast"></div>
+<div class="modal-overlay" id="modal-overlay" onclick="fecharModal(event)">
+  <div class="modal"><h3 id="modal-title"></h3><div id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div>
+</div>
+
+<!-- ══ AUTH ══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🎮 TecGame</div>
+    <div class="auth-sub">Gamificação para cursos técnicos profissionalizantes</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Cadastrar</button>
+    </div>
+    <div id="form-login">
+      <div class="field"><label>E-mail</label><input type="email" id="login-email" placeholder="professor@escola.com"></div>
+      <div class="field"><label>Senha</label><input type="password" id="login-pass" placeholder="Sua senha" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
+      <div id="login-error" class="error-box" style="display:none"></div>
+      <button class="btn-primary btn-block" id="btn-login" onclick="fazerLogin()">Entrar</button>
+      <div style="text-align:center;margin-top:.75rem"><span style="font-size:13px;color:var(--text-muted);cursor:pointer;text-decoration:underline" onclick="abrirResetSenha()">Esqueci minha senha</span></div>
+    </div>
+    <div id="form-signup" style="display:none">
+      <div class="field"><label>Nome</label><input type="text" id="signup-nome" placeholder="Seu nome"></div>
+      <div class="field"><label>E-mail</label><input type="email" id="signup-email" placeholder="professor@escola.com"></div>
+      <div class="field"><label>Senha</label><input type="password" id="signup-pass" placeholder="Mínimo 6 caracteres"></div>
+      <div id="signup-error" class="error-box" style="display:none"></div>
+      <div id="signup-success" style="display:none;background:var(--teal-light);color:var(--teal-text);border-radius:var(--radius);padding:.75rem 1rem;font-size:13px;margin-bottom:10px"></div>
+      <button class="btn-primary btn-block" id="btn-signup" onclick="fazerCadastro()">Criar conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app-screen">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-logo">🎮 TecGame <span onclick="fazerLogout()">Sair</span></div>
+      <button class="nav-item active" onclick="goTo('turmas')">👥 Turmas</button>
+      <button class="nav-item" onclick="goTo('ficha')">📋 Ficha do Aluno</button>
+      <button class="nav-item" onclick="goTo('missoes')">🎯 Missões e XP</button>
+      <button class="nav-item" onclick="goTo('feedback')">💬 Feedback</button>
+      <button class="nav-item" onclick="goTo('recompensas')">⭐ Recompensas</button>
+      <button class="nav-item" onclick="goTo('gerador')">🤖 Gerador IA</button>
+      <button class="nav-item" onclick="goTo('config')">⚙ Configurações</button>
+      <div class="sidebar-email" id="sidebar-email"></div>
+    </aside>
+
+    <div class="main-wrap">
+      <div class="turma-bar">
+        <label>Turma:</label>
+        <select id="turma-select" onchange="trocarTurmaAtiva()"></select>
+        <button class="btn-sm btn-primary" onclick="abrirModalNovaTurma()">+ Nova turma</button>
+        <span id="turma-bar-info" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+
+      <main class="main">
+
+        <!-- ── TURMAS ── -->
+        <div id="page-turmas" class="page active">
+          <h1>Turmas</h1>
+          <p class="subtitle">Gerencie suas turmas e acompanhe o progresso de cada aluno.</p>
+          <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+            <button class="btn-primary" onclick="abrirModalNovaTurma()">+ Nova turma</button>
+            <button onclick="abrirModalAdicionarAluno()">+ Adicionar aluno</button>
+            <button onclick="abrirModalTransferirAluno()">⇄ Transferir aluno</button>
+          </div>
+          <div id="turma-info-card" class="card" style="display:none">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:11px;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em">Turma ativa</div>
+                <div style="font-size:17px;font-weight:500" id="turma-nome-display">—</div>
+              </div>
+              <div style="margin-left:auto;display:flex;gap:8px">
+                <button class="btn-sm" onclick="abrirModalEditarTurma()">✏ Renomear</button>
+                <button class="btn-sm btn-danger" onclick="confirmarExcluirTurma()">🗑 Excluir</button>
+              </div>
+            </div>
+          </div>
+          <div id="sem-turma-msg" class="card" style="text-align:center;padding:2rem;color:var(--text-muted)">
+            Nenhuma turma ainda.<br>
+            <button class="btn-primary" style="margin-top:12px" onclick="abrirModalNovaTurma()">Criar primeira turma</button>
+          </div>
+          <div id="alunos-container" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;gap:8px">
+              <span class="sec-label" style="margin:0">Alunos (<span id="total-alunos">0</span>)</span>
+              <input type="text" id="busca-aluno" placeholder="Buscar..." style="width:180px;padding:.35rem .65rem;font-size:13px" oninput="renderTabelaAlunos()">
+            </div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <table class="data-table">
+                <thead><tr><th>Aluno</th><th>Nível</th><th>XP</th><th>Fichas</th><th>Ações</th></tr></thead>
+                <tbody id="alunos-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── FICHA ── -->
+        <div id="page-ficha" class="page">
+          <h1>Ficha do Aluno</h1>
+          <p class="subtitle">Progresso detalhado, histórico e anotações por aluno.</p>
+          <div class="field" style="max-width:300px">
+            <label>Aluno</label>
+            <select id="ficha-aluno-select" onchange="renderFichaAluno()"></select>
+          </div>
+          <div id="ficha-vazia" style="color:var(--text-muted);font-size:14px">Selecione um aluno acima.</div>
+          <div id="ficha-conteudo" style="display:none">
+            <div class="card">
+              <div style="display:flex;align-items:center;gap:14px;margin-bottom:1rem">
+                <div class="ficha-avatar" id="ficha-avatar">A</div>
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span style="font-size:17px;font-weight:500" id="ficha-nome">—</span>
+                    <span id="ficha-rank-badge" class="rank-badge rank-1">Calouro</span>
+                  </div>
+                  <div style="font-size:13px;color:var(--text-muted);margin-top:2px">
+                    Nível <span id="ficha-level" style="font-weight:500;color:var(--purple)">1</span> &nbsp;·&nbsp; Próx. nível: <span id="ficha-xp-next">100</span> XP
+                  </div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:11px;color:var(--text-muted)">XP total</div>
+                  <div style="font-size:26px;font-weight:500;color:var(--purple)" id="ficha-xp-total">0</div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted)">
+                <span>XP: <strong id="ficha-xp-cur">0</strong></span><span id="ficha-xp-pct">0%</span>
+              </div>
+              <div class="xp-bar-bg"><div class="xp-bar-fill" id="ficha-xp-bar" style="width:0%"></div></div>
+            </div>
+            <div class="grid3" style="margin-bottom:1rem">
+              <div class="stat-card"><div class="stat-label">XP total</div><div class="stat-val purple" id="ficha-stat-xp">0</div></div>
+              <div class="stat-card"><div class="stat-label">Fichas</div><div class="stat-val amber" id="ficha-stat-coins">0</div></div>
+              <div class="stat-card"><div class="stat-label">Evoluções</div><div class="stat-val teal" id="ficha-stat-ach">0</div></div>
+            </div>
+
+            <span class="sec-label">Ajuste manual de XP e Fichas</span>
+            <div class="card">
+              <div class="grid2" style="margin-bottom:10px">
+                <div class="field" style="margin:0"><label>Quantidade</label><input type="number" id="ficha-adj-val" value="10" min="1"></div>
+                <div class="field" style="margin:0"><label>Motivo</label><input type="text" id="ficha-adj-motivo" placeholder="Ex: Participação exemplar"></div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-primary btn-sm" onclick="ajustarAluno('xp',1)">+ XP</button>
+                <button class="btn-sm btn-danger" onclick="ajustarAluno('xp',-1)">− XP</button>
+                <button class="btn-primary btn-sm" onclick="ajustarAluno('coins',1)">+ Fichas</button>
+                <button class="btn-sm btn-danger" onclick="ajustarAluno('coins',-1)">− Fichas</button>
+              </div>
+            </div>
+
+            <span class="sec-label">Histórico de atividades</span>
+            <div class="card" style="padding:.75rem 1.25rem">
+              <div class="log-list" id="ficha-log"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── MISSÕES ── -->
+        <div id="page-missoes" class="page">
+          <h1>Missões e XP</h1>
+          <p class="subtitle">Lance XP e Fichas para um aluno ou para a turma inteira.</p>
+
+          <div class="field" style="max-width:300px;margin-bottom:1rem">
+            <label>Lançar para</label>
+            <select id="missao-alvo"><option value="__turma__">🏆 Turma inteira</option></select>
+          </div>
+
+          <div class="cat-tabs" id="cat-tabs"></div>
+          <div class="card"><div class="action-grid" id="earn-grid"></div></div>
+
+          <span class="sec-label">Como funciona</span>
+          <div class="card" style="font-size:14px;line-height:1.7;color:var(--text-muted)">
+            <strong style="color:var(--text)">XP</strong> é permanente — representa a evolução do aluno e determina o nível na trilha de carreira.<br><br>
+            <strong style="color:var(--text)">Fichas</strong> são consumíveis — o aluno troca por recompensas reais nas avaliações.
+          </div>
+        </div>
+
+        <!-- ── FEEDBACK ── -->
+        <div id="page-feedback" class="page">
+          <h1>Feedback</h1>
+          <p class="subtitle">Deixe observações e anotações individuais para cada aluno. Elas ficam visíveis na ficha.</p>
+
+          <div class="grid2" style="margin-bottom:1rem">
+            <div class="field">
+              <label>Aluno</label>
+              <select id="fb-aluno-select"></select>
+            </div>
+            <div class="field">
+              <label>Tipo</label>
+              <select id="fb-tipo">
+                <option value="elogio">🌟 Elogio / ponto forte</option>
+                <option value="atencao">⚠ Ponto de atenção</option>
+                <option value="orientacao">💡 Orientação / dica</option>
+                <option value="geral">📝 Anotação geral</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Mensagem</label>
+            <textarea id="fb-texto" placeholder="Ex: Demonstrou ótima habilidade na prática de hoje. Continuar desenvolvendo..."></textarea>
+          </div>
+          <button class="btn-primary" onclick="enviarFeedback()">Registrar feedback</button>
+
+          <div style="margin-top:1.5rem">
+            <span class="sec-label">Feedbacks recentes da turma</span>
+            <div id="fb-lista"></div>
+          </div>
+        </div>
+
+        <!-- ── RECOMPENSAS ── -->
+        <div id="page-recompensas" class="page">
+          <h1>Recompensas</h1>
+          <p class="subtitle">O aluno troca Fichas por vantagens reais nas avaliações.</p>
+          <div class="field" style="max-width:300px">
+            <label>Aluno</label>
+            <select id="almo-aluno-select" onchange="atualizarSaldoAlmo()"></select>
+          </div>
+          <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+            <span style="font-size:13px;color:var(--text-muted)">Fichas disponíveis:</span>
+            <span style="font-size:20px;font-weight:500;color:var(--amber)" id="almo-saldo">0</span>
+          </div>
+          <div class="shop-grid" id="shop-grid"></div>
+        </div>
+
+        <!-- ── GERADOR IA ── -->
+        <div id="page-gerador" class="page">
+          <h1>Gerador de Atividades</h1>
+          <p class="subtitle">A IA cria uma atividade gamificada completa, pronta para aplicar em aula.</p>
+          <div id="api-warning" class="error-box" style="display:none">Chave de IA não configurada. Vá em <strong>Configurações</strong>.</div>
+          <div class="card">
+            <div class="grid2">
+              <div class="field"><label>Curso técnico</label>
+                <select id="gen-curso">
+                  <option>Informática / TI</option><option>Eletrotécnica</option><option>Mecânica</option>
+                  <option>Administração</option><option>Enfermagem / Saúde</option>
+                  <option>Segurança do Trabalho</option><option>Logística</option>
+                  <option>Contabilidade</option><option>Design Gráfico</option>
+                  <option>Edificações / Construção</option><option>Agropecuária</option><option>Outro</option>
+                </select>
+              </div>
+              <div class="field"><label>Disciplina / módulo</label><input type="text" id="gen-disciplina" placeholder="Ex: Redes de computadores"></div>
+            </div>
+            <div class="field"><label>Conteúdo da aula</label><input type="text" id="gen-conteudo" placeholder="Ex: Configuração de roteadores e switches"></div>
+            <div class="field"><label>Objetivo de aprendizagem</label><input type="text" id="gen-objetivo" placeholder="Ex: O aluno deve configurar uma rede local funcional"></div>
+            <div class="grid2">
+              <div class="field"><label>Tempo disponível</label>
+                <select id="gen-tempo">
+                  <option value="10 minutos">10 min — aquecimento</option>
+                  <option value="20 minutos" selected>20 min — atividade rápida</option>
+                  <option value="40 minutos">40 min — aula completa</option>
+                  <option value="2 aulas (80 minutos)">2 aulas — projeto</option>
+                </select>
+              </div>
+              <div class="field"><label>Tipo de atividade</label>
+                <select id="gen-mecanica">
+                  <option>Quiz técnico com ranking</option>
+                  <option>Simulação de cenário profissional</option>
+                  <option>Missão colaborativa em equipes</option>
+                  <option>Desafio de diagnóstico progressivo</option>
+                  <option>Debate técnico entre grupos</option>
+                  <option>Corrida contra o tempo</option>
+                  <option>Estudo de caso com tomada de decisão</option>
+                  <option>Role-play / simulação de atendimento</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0"><label>Recompensas ativas</label>
+              <div style="display:flex;gap:16px;margin-top:4px">
+                <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text)"><input type="checkbox" id="r-xp" checked> XP</label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text)"><input type="checkbox" id="r-moeda" checked> Fichas</label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text)"><input type="checkbox" id="r-bonus"> Bônus de equipe</label>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:1rem">
+            <button class="btn-primary" id="btn-gerar" onclick="gerarAtividade()" style="flex:1">🤖 Gerar atividade com IA</button>
+            <button onclick="togglePromptView()">&#60;/&#62; Prompt</button>
+          </div>
+          <div id="prompt-area" style="display:none;margin-bottom:1rem"><span class="sec-label">Prompt enviado</span><div class="prompt-box" id="prompt-text"></div></div>
+          <div id="loading-area" style="display:none;padding:1.5rem 0;text-align:center;color:var(--text-muted);font-size:14px"><span class="spinner"></span><span id="loading-msg"></span></div>
+          <div id="error-gen" style="display:none"></div>
+          <div id="result-area" style="display:none">
+            <span class="sec-label">Atividade gerada</span>
+            <div id="result-tags" style="margin-bottom:8px"></div>
+            <div class="card" style="margin-bottom:8px"><div style="font-size:11px;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Nome da atividade</div><div style="font-size:17px;font-weight:500" id="res-nome"></div></div>
+            <span class="sec-label">Roteiro de aplicação</span><div class="result-block" id="res-descricao"></div>
+            <span class="sec-label">XP e Fichas por ação</span><div class="result-block" id="res-recompensas"></div>
+            <span class="sec-label">Dica para o professor</span><div class="result-block" id="res-dica"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+              <button class="btn-sm" onclick="gerarAtividade()">↺ Nova versão</button>
+              <button class="btn-sm" onclick="copiarResultado()">⎘ Copiar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CONFIG ── -->
+        <div id="page-config" class="page">
+          <h1>Configurações</h1>
+          <p class="subtitle">Configure a IA e gerencie sua conta.</p>
+          <div class="card" style="margin-bottom:1rem">
+            <h2>IA do Gerador</h2>
+            <div class="field"><label>Provedor</label>
+              <select id="cfg-ia-provider" onchange="trocarProvider()">
+                <option value="groq">Groq — Llama 3 (Gratuito ✓)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="openai">OpenAI — ChatGPT</option>
+                <option value="anthropic">Anthropic Claude</option>
+              </select>
+            </div>
+            <div id="cfg-groq-block">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Gratuito, sem cartão. Chave em <a href="https://console.groq.com" target="_blank" style="color:var(--purple)">console.groq.com</a> → API Keys → Create</p>
+              <div style="display:flex;gap:8px"><input type="password" id="groq-key-input" placeholder="gsk_..." style="flex:1"><button onclick="salvarChaveGroq()">Salvar</button></div>
+              <div style="margin-top:8px"><span id="groq-key-status" class="key-status key-missing">Não configurada</span></div>
+            </div>
+            <div id="cfg-gemini-block" style="display:none">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Chave em <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--purple)">aistudio.google.com</a></p>
+              <div style="display:flex;gap:8px"><input type="password" id="gemini-key-input" placeholder="AIza..." style="flex:1"><button onclick="salvarChaveGemini()">Salvar</button></div>
+              <div style="margin-top:8px"><span id="gemini-key-status" class="key-status key-missing">Não configurada</span></div>
+            </div>
+            <div id="cfg-openai-block" style="display:none">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Chave em <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--purple)">platform.openai.com</a></p>
+              <div style="display:flex;gap:8px"><input type="password" id="openai-key-input" placeholder="sk-..." style="flex:1"><button onclick="salvarChaveOpenAI()">Salvar</button></div>
+              <div style="margin-top:8px"><span id="openai-key-status" class="key-status key-missing">Não configurada</span></div>
+            </div>
+            <div id="cfg-anthropic-block" style="display:none">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Chave em <a href="https://console.anthropic.com" target="_blank" style="color:var(--purple)">console.anthropic.com</a></p>
+              <div style="display:flex;gap:8px"><input type="password" id="api-key-input" placeholder="sk-ant-..." style="flex:1"><button onclick="salvarChave()">Salvar</button></div>
+              <div style="margin-top:8px"><span id="key-status" class="key-status key-missing">Não configurada</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Conta</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Logado como: <strong id="cfg-email-display">—</strong></p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onclick="exportarDados()" class="btn-sm">⬇ Exportar dados (JSON)</button>
+              <button onclick="fazerLogout()" class="btn-sm btn-danger">Sair da conta</button>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════
+const SUPA_URL = 'https://kektgmkrkyjpbxlmxmwx.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtla3RnbWtya3lqcGJ4bG14bXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NTk1ODYsImV4cCI6MjA5NTUzNTU4Nn0.KNovVMV_ZDh9e5PdMYdRRVsYYGEix7TajgnY61lQKMg';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ═══════════════════════════════════════
+// CONSTANTES
+// ═══════════════════════════════════════
+const RANKS = [
+  {min:0,   max:99,   name:'Calouro',        cls:'rank-1',level:1,next:100},
+  {min:100, max:299,  name:'Aprendiz',        cls:'rank-2',level:2,next:300},
+  {min:300, max:699,  name:'Técnico Júnior',  cls:'rank-3',level:3,next:700},
+  {min:700, max:1499, name:'Técnico Pleno',   cls:'rank-4',level:4,next:1500},
+  {min:1500,max:Infinity,name:'Especialista', cls:'rank-5',level:5,next:null},
+];
+
+// Missões organizadas por categoria
+const MISSOES_CATS = {
+  '🎓 Aprendizado': [
+    {label:'Respondeu corretamente em aula',          xp:20, coins:10},
+    {label:'Tirou nota máxima em avaliação',          xp:80, coins:40},
+    {label:'Entregou atividade no prazo',             xp:50, coins:25},
+    {label:'Concluiu projeto prático',                xp:200,coins:100},
+    {label:'Apresentou trabalho para a turma',        xp:60, coins:30},
+    {label:'Realizou pesquisa e compartilhou',        xp:35, coins:18},
+  ],
+  '🤝 Colaboração': [
+    {label:'Ajudou colega com dificuldade',           xp:25, coins:12},
+    {label:'Liderou equipe em atividade',             xp:40, coins:20},
+    {label:'Participou ativamente de grupo',          xp:20, coins:10},
+    {label:'Ensinou conteúdo para o colega',          xp:30, coins:15},
+  ],
+  '⚙ Prática Técnica': [
+    {label:'Executou procedimento sem erros',         xp:50, coins:25},
+    {label:'Solucionou problema técnico sozinho',     xp:70, coins:35},
+    {label:'Demonstrou domínio de ferramenta',        xp:45, coins:22},
+    {label:'Zerou simulação prática',                 xp:80, coins:40},
+    {label:'Operou equipamento com segurança',        xp:40, coins:20},
+  ],
+  '🌟 Comportamento': [
+    {label:'Pontualidade exemplar no mês',            xp:30, coins:15},
+    {label:'Postura profissional destacada',          xp:25, coins:12},
+    {label:'Organização e capricho na entrega',       xp:20, coins:10},
+    {label:'Proatividade — foi além do solicitado',   xp:60, coins:30},
+    {label:'Zero faltas no mês',                      xp:50, coins:25},
+  ],
+};
+
+const SHOP_ITEMS = [
+  {id:'dica',    name:'Dica extra',         desc:'Uma dica durante avaliação',           cost:20, icon:'💡'},
+  {id:'prazo',   name:'Prazo estendido',     desc:'+1 dia para entregar atividade',       cost:40, icon:'🕐'},
+  {id:'revisao', name:'Revisar questão',     desc:'Pede correção de 1 questão da prova', cost:60, icon:'🔎'},
+  {id:'escudo',  name:'Escudo de nota',      desc:'Cancela 1 avaliação abaixo da média', cost:100,icon:'🛡'},
+  {id:'lab',     name:'Acesso ao lab',       desc:'Horário extra no laboratório',         cost:80, icon:'💻'},
+  {id:'mentor',  name:'Mentoria individual', desc:'15 min de orientação com o professor', cost:50, icon:'🎓'},
+];
+
+// ═══════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════
+let currentUser = null;
+let turmas = [];
+let alunos = [];
+let turmaAtivaId = null;
+let catAtiva = Object.keys(MISSOES_CATS)[0];
+
+function getRank(xp){ return RANKS.find(r=>xp>=r.min&&xp<=r.max)||RANKS[0]; }
+function getAlunos(tid){ return alunos.filter(a=>a.turma_id===tid); }
+function getAluno(aid){ return alunos.find(a=>a.id===aid)||null; }
+function getTurmaAtiva(){ return turmas.find(t=>t.id===turmaAtivaId)||null; }
+
+// ═══════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════
+function switchTab(tab){
+  document.getElementById('form-login').style.display  = tab==='login'  ? 'block':'none';
+  document.getElementById('form-signup').style.display = tab==='signup' ? 'block':'none';
+  document.getElementById('tab-login').classList.toggle('active',tab==='login');
+  document.getElementById('tab-signup').classList.toggle('active',tab==='signup');
+}
+
+async function fazerLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const errEl=document.getElementById('login-error');
+  const btn=document.getElementById('btn-login');
+  if(!email||!pass){errEl.textContent='Preencha e-mail e senha.';errEl.style.display='block';return;}
+  errEl.style.display='none'; btn.disabled=true; btn.textContent='Entrando...';
+  try{
+    const {data,error}=await supa.auth.signInWithPassword({email,password:pass});
+    if(error){errEl.textContent=traduzirErro(error.message);errEl.style.display='block';btn.disabled=false;btn.textContent='Entrar';return;}
+    if(data?.user){ document.getElementById('loading-overlay').style.display='flex'; await iniciarApp(data.user); }
+  }catch(e){errEl.textContent='Erro: '+e.message;errEl.style.display='block';btn.disabled=false;btn.textContent='Entrar';}
+}
+
+async function fazerCadastro(){
+  const nome=document.getElementById('signup-nome').value.trim();
+  const email=document.getElementById('signup-email').value.trim();
+  const pass=document.getElementById('signup-pass').value;
+  const errEl=document.getElementById('signup-error');
+  const sucEl=document.getElementById('signup-success');
+  const btn=document.getElementById('btn-signup');
+  errEl.style.display='none'; sucEl.style.display='none';
+  if(!nome){errEl.textContent='Informe seu nome.';errEl.style.display='block';return;}
+  btn.disabled=true; btn.textContent='Criando conta...';
+  const {error}=await supa.auth.signUp({email,password:pass,options:{data:{nome}}});
+  btn.disabled=false; btn.textContent='Criar conta';
+  if(error){errEl.textContent=traduzirErro(error.message);errEl.style.display='block';}
+  else{sucEl.textContent='Conta criada! Verifique seu e-mail e depois faça login.';sucEl.style.display='block';}
+}
+
+async function fazerLogout(){
+  currentUser=null;turmas=[];alunos=[];turmaAtivaId=null;
+  await supa.auth.signOut(); mostrarAuth();
+}
+
+function mostrarAuth(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('loading-overlay').style.display='none';
+}
+function mostrarApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  document.getElementById('loading-overlay').style.display='none';
+}
+
+function abrirResetSenha(){
+  abrirModal('Recuperar senha',
+    `<div class="field"><label>E-mail</label><input type="email" id="reset-email" placeholder="professor@escola.com"></div>`,
+    `<button onclick="fecharModal()">Cancelar</button><button class="btn-primary" onclick="enviarResetSenha()">Enviar link</button>`);
+}
+async function enviarResetSenha(){
+  const email=document.getElementById('reset-email').value.trim(); if(!email) return;
+  await supa.auth.resetPasswordForEmail(email); fecharModal(); toast('Link enviado!');
+}
+function traduzirErro(msg){
+  if(msg.includes('Invalid login')) return 'E-mail ou senha incorretos.';
+  if(msg.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+  if(msg.includes('already registered')) return 'E-mail já cadastrado.';
+  if(msg.includes('Password should be')) return 'Senha deve ter ao menos 6 caracteres.';
+  return msg;
+}
+
+// ═══════════════════════════════════════
+// INIT — fluxo único e limpo
+// ═══════════════════════════════════════
+async function iniciarApp(user){
+  currentUser = user;
+  try{ document.getElementById('sidebar-email').textContent=user.email; }catch(e){}
+  // Carrega dados do Supabase
+try{
+  const {data:t, error:errorTurmas} =
+    await supa.from('turmas').select('*').order('criado_em');
+
+  const {data:a, error:errorAlunos} =
+    await supa.from('alunos').select('*').order('criado_em');
+
+  console.log('TURMAS:', t);
+  console.log('ERRO TURMAS:', errorTurmas);
+
+  console.log('ALUNOS:', a);
+  console.log('ERRO ALUNOS:', errorAlunos);
+
+  if(errorTurmas) throw errorTurmas;
+  if(errorAlunos) throw errorAlunos;
+
+  turmas=t||[];
+  alunos=(a||[]).map(x=>({
+    ...x,
+    log:Array.isArray(x.log)?x.log:[]
+  }));
+
+}catch(e){
+  console.error('ERRO INIT:', e);
+
+  turmas=[];
+  alunos=[];
+  turmaAtivaId=null;
+}
+  // Renderiza UI
+  try{ renderCatTabs(); renderEarnGrid(); }catch(e){}
+  try{ refreshTudo(); }catch(e){}
+  mostrarApp();
+}
+
+// Verifica sessão ao carregar página
+(async()=>{
+  try{
+    const {data}=await supa.auth.getSession();
+    const session = data?.session;
+
+if(session?.user?.id){
+  currentUser = session.user;
+
+  const { data: validUser, error } = await supa.auth.getUser();
+
+  if(error || !validUser?.user){
+    await supa.auth.signOut();
+    mostrarAuth();
+    return;
+  }
+
+  await iniciarApp(session.user);
+}else{
+  mostrarAuth();
+}
+  }catch(e){ mostrarAuth(); }
+})();
+
+// Detecta logout em outras abas
+supa.auth.onAuthStateChange((event)=>{
+  if(event==='SIGNED_OUT'){ currentUser=null;turmas=[];alunos=[];turmaAtivaId=null;mostrarAuth(); }
+});
+
+// ═══════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════
+function goTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+page+"'"))n.classList.add('active');});
+  if(page==='ficha')       populateFichaSelect();
+  if(page==='missoes')     populateMissaoSelect();
+  if(page==='feedback')    populateFeedbackPage();
+  if(page==='recompensas') populateAlmoSelect();
+  if(page==='config')      loadConfig();
+}
+
+// ═══════════════════════════════════════
+// REFRESH
+// ═══════════════════════════════════════
+function refreshTudo(){
+  const sel=document.getElementById('turma-select');
+  sel.innerHTML=turmas.length===0?'<option value="">— nenhuma turma —</option>':turmas.map(t=>`<option value="${t.id}"${t.id===turmaAtivaId?' selected':''}>${t.nome}</option>`).join('');
+  const t=getTurmaAtiva();
+  document.getElementById('turma-info-card').style.display=t?'block':'none';
+  document.getElementById('sem-turma-msg').style.display=t?'none':'block';
+  document.getElementById('alunos-container').style.display=t?'block':'none';
+  if(t) document.getElementById('turma-nome-display').textContent=t.nome;
+  renderTabelaAlunos();
+  document.getElementById('turma-bar-info').textContent=t?getAlunos(turmaAtivaId).length+' aluno(s)':'';
+}
+
+function trocarTurmaAtiva(){
+  turmaAtivaId=document.getElementById('turma-select').value||null;
+  if(currentUser) localStorage.setItem('indt_turma_'+currentUser.id,turmaAtivaId||'');
+  refreshTudo();
+}
+
+function renderTabelaAlunos(){
+  if(!turmaAtivaId) return;
+  const busca=(document.getElementById('busca-aluno')?.value||'').toLowerCase();
+  const lista=getAlunos(turmaAtivaId).filter(a=>a.nome.toLowerCase().includes(busca));
+  document.getElementById('total-alunos').textContent=getAlunos(turmaAtivaId).length;
+  const tbody=document.getElementById('alunos-tbody');
+  if(!lista.length){tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem">Nenhum aluno${busca?' encontrado':' na turma ainda'}.</td></tr>`;return;}
+  tbody.innerHTML=lista.map(a=>{
+    const r=getRank(a.xp);
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="aluno-avatar">${a.nome[0].toUpperCase()}</div><span style="font-weight:500">${a.nome}</span></div></td>
+      <td><span class="rank-badge ${r.cls}">${r.name}</span></td>
+      <td style="font-weight:500;color:var(--purple)">${a.xp}</td>
+      <td style="font-weight:500;color:var(--amber)">${a.coins}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="btn-sm" onclick="abrirFichaAluno('${a.id}')">📋</button>
+        <button class="btn-sm btn-danger" onclick="confirmarRemoverAluno('${a.id}','${a.nome.replace(/'/g,"\\'")}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// TURMA CRUD
+// ═══════════════════════════════════════
+function abrirModalNovaTurma(){
+  abrirModal('Nova turma',
+    `<div class="field"><label>Nome da turma</label><input type="text" id="m-turma-nome" placeholder="Ex: Informática — Turma A 2025"></div>`,
+    `<button onclick="fecharModal()">Cancelar</button><button class="btn-primary" onclick="confirmarNovaTurma()">Criar</button>`);
+  setTimeout(()=>document.getElementById('m-turma-nome')?.focus(),50);
+}
+async function confirmarNovaTurma(){
+  const nome=document.getElementById('m-turma-nome').value.trim(); if(!nome){toast('Informe o nome');return;}
+  const {data,error}=await supa.from('turmas').insert({nome,professor_id:currentUser.id}).select().single();
+  if(error){toast('Erro: '+error.message);return;}
+  turmas.push(data); turmaAtivaId=data.id; fecharModal(); refreshTudo(); toast('Turma "'+nome+'" criada!');
+}
+function abrirModalEditarTurma(){
+  const t=getTurmaAtiva(); if(!t) return;
+  abrirModal('Renomear turma',`<div class="field"><label>Novo nome</label><input type="text" id="m-turma-rename" value="${t.nome}"></div>`,
+    `<button onclick="fecharModal()">Cancelar</button><button class="btn-primary" onclick="confirmarRenameTurma()">Salvar</button>`);
+}
+async function confirmarRenameTurma(){
+  const nome=document.getElementById('m-turma-rename').value.trim(); if(!nome) return;
+  await supa.from('turmas').update({nome}).eq('id',turmaAtivaId);
+  turmas.find(t=>t.id===turmaAtivaId).nome=nome; fecharModal(); refreshTudo(); toast('Turma renomeada!');
+}
+function confirmarExcluirTurma(){
+  const t=getTurmaAtiva(); if(!t) return;
+  abrirModal('Excluir turma',`<p style="font-size:14px;color:var(--text-muted)">Excluir <strong>${t.nome}</strong> e todos os alunos? Ação irreversível.</p>`,
+    `<button onclick="fecharModal()">Cancelar</button><button class="btn-danger" onclick="executarExcluirTurma()">Excluir</button>`);
+}
+async function executarExcluirTurma(){
+  await supa.from('turmas').delete().eq('id',turmaAtivaId);
+  turmas=turmas.filter(t=>t.id!==turmaAtivaId); alunos=alunos.filter(a=>a.turma_id!==turmaAtivaId);
+  turmaAtivaId=turmas[0]?.id||null; fecharModal(); refreshTudo(); toast('Turma excluída.');
+}
+
+// ═══════════════════════════════════════
+// ALUNO CRUD
+// ═══════════════════════════════════════
+function abrirModalAdicionarAluno(){
+  if(!getTurmaAtiva()){toast('Crie uma turma primeiro');return;}
+  abrirModal('Adicionar aluno',`<div class="field"><label>Nome completo</label><input type="text" id="m-aluno-nome" placeholder="Nome do aluno"></div>`,
+    `<button onclick="fecharModal()">Cancelar</button><button class="btn-primary" onclick="confirmarAdicionarAluno()">Adicionar</button>`);
+  setTimeout(()=>document.getElementById('m-aluno-nome')?.focus(),50);
+}
+async function confirmarAdicionarAluno(){
+  const nome=document.getElementById('m-aluno-nome').value.trim(); if(!nome){toast('Informe o nome');return;}
+  const {data,error}=await supa.from('alunos').insert({nome,turma_id:turmaAtivaId,professor_id:currentUser.id,xp:0,coins:0,achievements:0,log:[]}).select().single();
+  if(error){toast('Erro: '+error.message);return;}
+  alunos.push({...data,log:[]}); fecharModal(); refreshTudo(); toast(nome+' adicionado(a)!');
+}
+function confirmarRemoverAluno(aid,nome){
+  abrirModal('Remover aluno',`<p style="font-size:14px;color:var(--text-muted)">Remover <strong>${nome}</strong>? O histórico será perdido.</p>`,
+    `<button onclick="fecharModal()">Cancelar</button><button class="btn-danger" onclick="executarRemoverAluno('${aid}')">Remover</button>`);
+}
+async function executarRemoverAluno(aid){
+  await supa.from('alunos').delete().eq('id',aid);
+  alunos=alunos.filter(a=>a.id!==aid); fecharModal(); refreshTudo(); toast('Aluno removido.');
+}
+function abrirModalTransferirAluno(){
+  const t=getTurmaAtiva(); if(!t){toast('Selecione uma turma');return;}
+  const lista=getAlunos(t.id); if(!lista.length){toast('Nenhum aluno na turma');return;}
+  const outras=turmas.filter(x=>x.id!==t.id); if(!outras.length){toast('Crie outra turma primeiro');return;}
+  abrirModal('Transferir aluno',
+    `<div class="field"><label>Aluno</label><select id="m-transf-aluno">${lista.map(a=>`<option value="${a.id}">${a.nome}</option>`).join('')}</select></div>
+     <div class="field"><label>Turma destino</label><select id="m-transf-destino">${outras.map(x=>`<option value="${x.id}">${x.nome}</option>`).join('')}</select></div>`,
+    `<button onclick="fecharModal()">Cancelar</button><button class="btn-primary" onclick="executarTransferencia()">Transferir</button>`);
+}
+async function executarTransferencia(){
+  const aid=document.getElementById('m-transf-aluno').value;
+  const did=document.getElementById('m-transf-destino').value;
+  await supa.from('alunos').update({turma_id:did}).eq('id',aid);
+  const a=alunos.find(x=>x.id===aid); if(a) a.turma_id=did;
+  fecharModal(); refreshTudo(); toast('Aluno transferido!');
+}
+async function salvarAluno(a){
+  await supa.from('alunos').update({xp:a.xp,coins:a.coins,achievements:a.achievements,log:a.log}).eq('id',a.id);
+}
+
+// ═══════════════════════════════════════
+// FICHA
+// ═══════════════════════════════════════
+function abrirFichaAluno(aid){
+  goTo('ficha');
+  setTimeout(()=>{const s=document.getElementById('ficha-aluno-select');if(s){s.value=aid;renderFichaAluno();}},80);
+}
+function populateFichaSelect(){
+  const lista=turmaAtivaId?getAlunos(turmaAtivaId):[];
+  const sel=document.getElementById('ficha-aluno-select');
+  sel.innerHTML=lista.length?lista.map(a=>`<option value="${a.id}">${a.nome}</option>`).join(''):'<option value="">— sem alunos —</option>';
+  renderFichaAluno();
+}
+function renderFichaAluno(){
+  const a=getAluno(document.getElementById('ficha-aluno-select').value);
+  const vazia=document.getElementById('ficha-vazia'); const cont=document.getElementById('ficha-conteudo');
+  if(!a){vazia.style.display='block';cont.style.display='none';return;}
+  vazia.style.display='none'; cont.style.display='block';
+  const r=getRank(a.xp); const pct=r.next?Math.round(((a.xp-r.min)/(r.next-r.min))*100):100;
+  document.getElementById('ficha-avatar').textContent=a.nome[0].toUpperCase();
+  document.getElementById('ficha-nome').textContent=a.nome;
+  document.getElementById('ficha-level').textContent=r.level;
+  document.getElementById('ficha-xp-total').textContent=a.xp;
+  document.getElementById('ficha-xp-cur').textContent=a.xp;
+  document.getElementById('ficha-xp-next').textContent=r.next||'MAX';
+  document.getElementById('ficha-xp-pct').textContent=pct+'%';
+  document.getElementById('ficha-xp-bar').style.width=Math.min(pct,100)+'%';
+  const rb=document.getElementById('ficha-rank-badge'); rb.textContent=r.name; rb.className='rank-badge '+r.cls;
+  document.getElementById('ficha-stat-xp').textContent=a.xp;
+  document.getElementById('ficha-stat-coins').textContent=a.coins;
+  document.getElementById('ficha-stat-ach').textContent=a.achievements;
+  const logEl=document.getElementById('ficha-log');
+  logEl.innerHTML=a.log.length
+    ?a.log.slice().reverse().slice(0,40).map(e=>`<div class="log-entry"><span>${e.label}</span><span class="${e.type==='earn'?'log-earn':e.type==='note'?'log-note':'log-spend'}">${e.pts}</span></div>`).join('')
+    :'<div style="font-size:13px;color:var(--text-muted)">Nenhuma atividade registrada.</div>';
+}
+async function ajustarAluno(tipo,sinal){
+  const a=getAluno(document.getElementById('ficha-aluno-select').value); if(!a) return;
+  const val=Math.abs(parseInt(document.getElementById('ficha-adj-val').value)||0);
+  const motivo=document.getElementById('ficha-adj-motivo').value.trim();
+  const delta=sinal*val;
+  if(tipo==='xp'){const b=getRank(a.xp);a.xp=Math.max(0,a.xp+delta);if(getRank(a.xp).level>b.level)a.achievements++;}
+  else{a.coins=Math.max(0,a.coins+delta);}
+  a.log.push({ts:Date.now(),label:motivo||(tipo==='xp'?'Ajuste de XP':'Ajuste de Fichas'),pts:(delta>=0?'+':'')+delta+(tipo==='xp'?' XP':' fichas'),type:delta>=0?'earn':'spend'});
+  await salvarAluno(a); renderFichaAluno(); renderTabelaAlunos();
+  toast((sinal>0?'+':'−')+val+(tipo==='xp'?' XP':' fichas')+' → '+a.nome);
+}
+
+// ═══════════════════════════════════════
+// MISSÕES
+// ═══════════════════════════════════════
+function renderCatTabs(){
+  document.getElementById('cat-tabs').innerHTML=Object.keys(MISSOES_CATS).map(c=>
+    `<button class="cat-tab${c===catAtiva?' active':''}" onclick="mudarCat('${c}')">${c}</button>`
+  ).join('');
+}
+function mudarCat(cat){
+  catAtiva=cat; renderCatTabs(); renderEarnGrid();
+}
+function renderEarnGrid(){
+  const acoes=MISSOES_CATS[catAtiva]||[];
+  document.getElementById('earn-grid').innerHTML=acoes.map(ac=>
+    `<button class="action-btn" onclick="lancarMissao('${ac.label.replace(/'/g,"\\'")}',${ac.xp},${ac.coins})">
+      <span style="flex:1;text-align:left">${ac.label}</span>
+      <span class="pts-earn">+${ac.xp} XP +${ac.coins}</span>
+    </button>`
+  ).join('');
+}
+function populateMissaoSelect(){
+  const lista=turmaAtivaId?getAlunos(turmaAtivaId):[];
+  document.getElementById('missao-alvo').innerHTML=
+    '<option value="__turma__">🏆 Turma inteira</option>'+lista.map(a=>`<option value="${a.id}">${a.nome}</option>`).join('');
+}
+async function lancarMissao(label,xp,coins){
+  if(!turmaAtivaId){toast('Selecione uma turma');return;}
+  const alvo=document.getElementById('missao-alvo').value;
+  const lista=alvo==='__turma__'?getAlunos(turmaAtivaId):[getAluno(alvo)].filter(Boolean);
+  if(!lista.length){toast('Nenhum aluno');return;}
+  for(const a of lista){
+    const b=getRank(a.xp); a.xp+=xp; a.coins+=coins;
+    if(getRank(a.xp).level>b.level) a.achievements++;
+    a.log.push({ts:Date.now(),label,pts:'+'+xp+' XP  +'+coins+' fichas',type:'earn'});
+    await salvarAluno(a);
+  }
+  toast(alvo==='__turma__'?'+'+xp+' XP para '+lista.length+' alunos!':'+'+xp+' XP → '+lista[0].nome);
+  renderTabelaAlunos();
+}
+
+// ═══════════════════════════════════════
+// FEEDBACK
+// ═══════════════════════════════════════
+const FB_ICONS={elogio:'🌟',atencao:'⚠',orientacao:'💡',geral:'📝'};
+
+function populateFeedbackPage(){
+  const lista=turmaAtivaId?getAlunos(turmaAtivaId):[];
+  const sel=document.getElementById('fb-aluno-select');
+  sel.innerHTML=lista.length?lista.map(a=>`<option value="${a.id}">${a.nome}</option>`).join(''):'<option value="">— sem alunos —</option>';
+  renderFeedbackLista();
+}
+
+function renderFeedbackLista(){
+  const lista=turmaAtivaId?getAlunos(turmaAtivaId):[];
+  const feedbacks=[];
+  lista.forEach(a=>{
+    (a.log||[]).filter(e=>e.type==='note').forEach(e=>feedbacks.push({...e,nomeAluno:a.nome}));
+  });
+  feedbacks.sort((a,b)=>b.ts-a.ts);
+  const el=document.getElementById('fb-lista');
+  if(!feedbacks.length){el.innerHTML='<div style="color:var(--text-muted);font-size:14px">Nenhum feedback registrado ainda.</div>';return;}
+  el.innerHTML=feedbacks.slice(0,20).map(f=>`
+    <div class="nota-card">
+      <div class="nota-text">${f.label}</div>
+      <div class="nota-meta">${f.pts} &nbsp;·&nbsp; ${f.nomeAluno} &nbsp;·&nbsp; ${new Date(f.ts).toLocaleDateString('pt-BR')}</div>
+    </div>`).join('');
+}
+
+async function enviarFeedback(){
+  const aid=document.getElementById('fb-aluno-select').value;
+  const tipo=document.getElementById('fb-tipo').value;
+  const texto=document.getElementById('fb-texto').value.trim();
+  if(!texto){toast('Escreva o feedback');return;}
+  const a=getAluno(aid); if(!a){toast('Selecione um aluno');return;}
+  const icon=FB_ICONS[tipo]||'📝';
+  const label=icon+' '+texto;
+  a.log.push({ts:Date.now(),label,pts:tipo,type:'note'});
+  await salvarAluno(a);
+  document.getElementById('fb-texto').value='';
+  renderFeedbackLista();
+  toast('Feedback registrado para '+a.nome+'!');
+}
+
+// ═══════════════════════════════════════
+// RECOMPENSAS
+// ═══════════════════════════════════════
+function populateAlmoSelect(){
+  const lista=turmaAtivaId?getAlunos(turmaAtivaId):[];
+  const sel=document.getElementById('almo-aluno-select');
+  sel.innerHTML=lista.length?lista.map(a=>`<option value="${a.id}">${a.nome}</option>`).join(''):'<option value="">— sem alunos —</option>';
+  atualizarSaldoAlmo();
+}
+function atualizarSaldoAlmo(){
+  const a=getAluno(document.getElementById('almo-aluno-select')?.value);
+  document.getElementById('almo-saldo').textContent=a?a.coins:0;
+  renderShop();
+}
+function renderShop(){
+  const a=getAluno(document.getElementById('almo-aluno-select')?.value);
+  const coins=a?a.coins:0;
+  document.getElementById('shop-grid').innerHTML=SHOP_ITEMS.map(item=>
+    `<div class="shop-item${coins<item.cost?' disabled':''}" onclick="resgatarItem('${item.name.replace(/'/g,"\\'")}',${item.cost})">
+      <div style="font-size:24px;margin-bottom:6px">${item.icon}</div>
+      <div class="shop-item-name">${item.name}</div>
+      <div class="shop-item-desc">${item.desc}</div>
+      <div class="shop-item-price">${item.cost} fichas</div>
+    </div>`).join('');
+}
+async function resgatarItem(nome,cost){
+  const a=getAluno(document.getElementById('almo-aluno-select')?.value);
+  if(!a||a.coins<cost){toast('Fichas insuficientes');return;}
+  a.coins-=cost;
+  a.log.push({ts:Date.now(),label:'Resgatou: '+nome,pts:'-'+cost+' fichas',type:'spend'});
+  await salvarAluno(a); toast(a.nome+' resgatou: '+nome); atualizarSaldoAlmo(); renderTabelaAlunos();
+}
+
+// ═══════════════════════════════════════
+// GERADOR IA
+// ═══════════════════════════════════════
+let showPromptView=false;
+function togglePromptView(){ showPromptView=!showPromptView; document.getElementById('prompt-area').style.display=showPromptView?'block':'none'; }
+function getProvider(){ return localStorage.getItem('gamt_ia_provider')||'groq'; }
+const IA_LABELS={groq:'Groq Llama 3',gemini:'Gemini',openai:'GPT-4o mini',anthropic:'Claude'};
+const loadingMsgs=['Analisando o contexto...','Criando o roteiro...','Calibrando recompensas...','Finalizando...'];
+
+function buildPrompt(){
+  const curso=document.getElementById('gen-curso').value;
+  const disc=document.getElementById('gen-disciplina').value||'não especificada';
+  const cont=document.getElementById('gen-conteudo').value||'não especificado';
+  const obj=document.getElementById('gen-objetivo').value||'não especificado';
+  const tempo=document.getElementById('gen-tempo').value;
+  const mec=document.getElementById('gen-mecanica').value;
+  const rec=[];
+  if(document.getElementById('r-xp').checked)rec.push('XP');
+  if(document.getElementById('r-moeda').checked)rec.push('Fichas');
+  if(document.getElementById('r-bonus').checked)rec.push('Bônus de equipe');
+  return `Você é especialista em gamificação pedagógica para cursos técnicos profissionalizantes (alunos de 15 a 17 anos).
+
+Crie uma atividade gamificada completa e engajante:
+- Curso: ${curso} | Disciplina: ${disc}
+- Conteúdo: ${cont} | Objetivo: ${obj}
+- Tempo: ${tempo} | Tipo: ${mec}
+- Recompensas: ${rec.join(', ')||'nenhuma'}
+
+A atividade deve: conectar o conteúdo com situações reais da área profissional, usar linguagem direta e motivadora para jovens de 15-17 anos, e incluir mecânicas de jogo que tornem a aula dinâmica e participativa.
+
+Responda SOMENTE JSON válido sem markdown:
+{"nome":"Nome criativo e motivador","descricao":"Roteiro completo: contexto inicial para engajar os alunos, regras claras, como aplicar a mecânica ${mec} ao conteúdo, e como encerrar com reflexão. Seja específico e prático.","recompensas":"Tabela detalhada de XP e Fichas por ação específica dentro da atividade. Inclua bônus por agilidade, criatividade e trabalho em equipe.","dica":"Dica prática para o professor: como engajar alunos resistentes, como adaptar para turmas grandes, e como conectar a atividade com o mercado de trabalho da área."}`;
+}
+
+async function chamarGroq(p){
+  const k=localStorage.getItem('gamt_groq_key')||''; if(!k) throw new Error('Chave Groq não configurada.');
+  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:1200,temperature:.7,messages:[{role:'user',content:p}]})});
+  const d=await r.json(); if(!r.ok) throw new Error(d.error?.message||'Erro Groq '+r.status);
+  return d.choices?.[0]?.message?.content||'';
+}
+async function chamarGemini(p){
+  const k=localStorage.getItem('gamt_gemini_key')||''; if(!k) throw new Error('Chave Gemini não configurada.');
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${k}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:p}]}],generationConfig:{temperature:.7,maxOutputTokens:1200}})});
+  const d=await r.json(); if(!r.ok) throw new Error(d.error?.message||'Erro Gemini '+r.status);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+}
+async function chamarOpenAI(p){
+  const k=localStorage.getItem('gamt_openai_key')||''; if(!k.startsWith('sk-')) throw new Error('Chave OpenAI não configurada.');
+  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},body:JSON.stringify({model:'gpt-4o-mini',max_tokens:1200,temperature:.7,messages:[{role:'user',content:p}]})});
+  const d=await r.json(); if(!r.ok) throw new Error(d.error?.message||'Erro OpenAI '+r.status);
+  return d.choices?.[0]?.message?.content||'';
+}
+async function chamarAnthropic(p){
+  const k=localStorage.getItem('gamt_apikey')||''; if(!k.startsWith('sk-ant')) throw new Error('Chave Anthropic não configurada.');
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,messages:[{role:'user',content:p}]})});
+  const d=await r.json(); if(!r.ok) throw new Error(d.error?.message||'Erro Anthropic '+r.status);
+  return d.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+}
+
+async function gerarAtividade(){
+  document.getElementById('api-warning').style.display='none';
+  const btn=document.getElementById('btn-gerar'); btn.disabled=true;
+  document.getElementById('result-area').style.display='none';
+  document.getElementById('error-gen').style.display='none';
+  document.getElementById('loading-area').style.display='block';
+  const msgEl=document.getElementById('loading-msg'); let idx=0; msgEl.textContent=loadingMsgs[0];
+  const iv=setInterval(()=>{try{msgEl.textContent=loadingMsgs[++idx%loadingMsgs.length];}catch(e){}},1800);
+  try{
+    const p=buildPrompt(); const prov=getProvider();
+    document.getElementById('prompt-text').textContent='['+IA_LABELS[prov]+']\n\n'+p;
+    let raw=prov==='groq'?await chamarGroq(p):prov==='gemini'?await chamarGemini(p):prov==='openai'?await chamarOpenAI(p):await chamarAnthropic(p);
+    const match=raw.match(/\{[\s\S]*\}/); if(!match) throw new Error('Resposta inválida da IA. Tente novamente.');
+    const parsed=JSON.parse(match[0]);
+    clearInterval(iv); document.getElementById('loading-area').style.display='none';
+    document.getElementById('res-nome').textContent=parsed.nome||'—';
+    document.getElementById('res-descricao').textContent=parsed.descricao||'—';
+    document.getElementById('res-recompensas').textContent=parsed.recompensas||'—';
+    document.getElementById('res-dica').textContent=parsed.dica||'—';
+    document.getElementById('result-tags').innerHTML=
+      `<span class="tag tag-purple">${document.getElementById('gen-curso').value}</span>`+
+      `<span class="tag tag-amber">${document.getElementById('gen-tempo').value}</span>`+
+      `<span class="tag tag-teal">${document.getElementById('gen-mecanica').value}</span>`+
+      `<span class="tag tag-coral">${IA_LABELS[prov]}</span>`;
+    document.getElementById('result-area').style.display='block';
+  }catch(e){
+    clearInterval(iv); document.getElementById('loading-area').style.display='none';
+    document.getElementById('error-gen').style.display='block';
+    document.getElementById('error-gen').innerHTML=`<div class="error-box">⚠ ${e.message}</div>`;
+  }finally{ btn.disabled=false; }
+}
+function copiarResultado(){
+  const txt='ATIVIDADE: '+document.getElementById('res-nome').textContent+'\n\nROTEIRO:\n'+document.getElementById('res-descricao').textContent+'\n\nRECOMPENSAS:\n'+document.getElementById('res-recompensas').textContent+'\n\nDICA:\n'+document.getElementById('res-dica').textContent;
+  navigator.clipboard.writeText(txt).then(()=>toast('Copiado!')).catch(()=>toast('Erro ao copiar'));
+}
+
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+function trocarProvider(){
+  const p=document.getElementById('cfg-ia-provider').value;
+  ['groq','gemini','openai','anthropic'].forEach(x=>document.getElementById('cfg-'+x+'-block').style.display=p===x?'block':'none');
+  localStorage.setItem('gamt_ia_provider',p);
+}
+function salvarChaveGroq(){const v=document.getElementById('groq-key-input').value.trim();if(!v){toast('Inválida');return;}localStorage.setItem('gamt_groq_key',v);atualizarStatusGroq();toast('Chave Groq salva!');}
+function atualizarStatusGroq(){const k=localStorage.getItem('gamt_groq_key')||'';const el=document.getElementById('groq-key-status');const ok=k.startsWith('gsk_')||k.length>20;el.textContent=ok?'Configurada ✓':'Não configurada';el.className='key-status '+(ok?'key-ok':'key-missing');}
+function salvarChaveGemini(){const v=document.getElementById('gemini-key-input').value.trim();if(!v){toast('Inválida');return;}localStorage.setItem('gamt_gemini_key',v);atualizarStatusGemini();toast('Chave Gemini salva!');}
+function atualizarStatusGemini(){const k=localStorage.getItem('gamt_gemini_key')||'';const el=document.getElementById('gemini-key-status');const ok=k.length>20;el.textContent=ok?'Configurada ✓':'Não configurada';el.className='key-status '+(ok?'key-ok':'key-missing');}
+function salvarChaveOpenAI(){const v=document.getElementById('openai-key-input').value.trim();if(!v){toast('Inválida');return;}localStorage.setItem('gamt_openai_key',v);atualizarStatusOpenAI();toast('Chave OpenAI salva!');}
+function atualizarStatusOpenAI(){const k=localStorage.getItem('gamt_openai_key')||'';const el=document.getElementById('openai-key-status');el.textContent=k.startsWith('sk-')?'Configurada ✓':'Não configurada';el.className='key-status '+(k.startsWith('sk-')?'key-ok':'key-missing');}
+function salvarChave(){const v=document.getElementById('api-key-input').value.trim();if(!v){toast('Inválida');return;}localStorage.setItem('gamt_apikey',v);atualizarStatusChave();toast('Chave Anthropic salva!');}
+function atualizarStatusChave(){const k=localStorage.getItem('gamt_apikey')||'';const el=document.getElementById('key-status');el.textContent=k.startsWith('sk-ant')?'Configurada ✓':'Não configurada';el.className='key-status '+(k.startsWith('sk-ant')?'key-ok':'key-missing');}
+function loadConfig(){
+  const p=localStorage.getItem('gamt_ia_provider')||'groq';
+  document.getElementById('cfg-ia-provider').value=p; trocarProvider();
+  const grk=localStorage.getItem('gamt_groq_key')||''; if(grk)document.getElementById('groq-key-input').value=grk;
+  const gk=localStorage.getItem('gamt_gemini_key')||''; if(gk)document.getElementById('gemini-key-input').value=gk;
+  const ok=localStorage.getItem('gamt_openai_key')||''; if(ok)document.getElementById('openai-key-input').value=ok;
+  const ak=localStorage.getItem('gamt_apikey')||''; if(ak)document.getElementById('api-key-input').value=ak;
+  atualizarStatusGroq();atualizarStatusGemini();atualizarStatusOpenAI();atualizarStatusChave();
+  document.getElementById('cfg-email-display').textContent=currentUser?.email||'—';
+}
+function exportarDados(){
+  const blob=new Blob([JSON.stringify({turmas,alunos},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tecgame-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('Exportado!');
+}
+
+// ═══════════════════════════════════════
+// MODAL / TOAST
+// ═══════════════════════════════════════
+function abrirModal(title,bodyHTML,footerHTML){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=bodyHTML;document.getElementById('modal-footer').innerHTML=footerHTML;document.getElementById('modal-overlay').classList.add('open');}
+function fecharModal(e){if(!e||e.target===document.getElementById('modal-overlay'))document.getElementById('modal-overlay').classList.remove('open');}
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200);}
+</script>
+</body>
+</html>
