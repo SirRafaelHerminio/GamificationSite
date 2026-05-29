@@ -108,13 +108,20 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .cat-tab.active{background:var(--purple-light);color:var(--purple-text);border-color:var(--purple-light);font-weight:500}
 
 /* ── Shop ── */
-.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .shop-item{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.85rem;cursor:pointer;transition:border-color .15s}
 .shop-item:hover{border-color:var(--border-strong)}
 .shop-item.disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
+.shop-item.turma-item{border-color:var(--purple-light);background:var(--purple-light)}
+.shop-item.turma-item:hover{border-color:var(--purple)}
 .shop-item-name{font-size:13px;font-weight:500;margin-bottom:3px}
 .shop-item-desc{font-size:11px;color:var(--text-muted);margin-bottom:6px;line-height:1.4}
 .shop-item-price{font-size:12px;font-weight:500;color:var(--amber)}
+.recomp-tabs{display:flex;gap:4px;background:var(--bg);border-radius:var(--radius);padding:3px;margin-bottom:1.25rem;max-width:320px}
+.recomp-tab{flex:1;padding:.4rem;border:none;border-radius:6px;background:none;font-size:13px;color:var(--text-muted);cursor:pointer;transition:background .15s,color .15s}
+.recomp-tab.active{background:var(--surface);color:var(--text);font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.pool-bar-bg{height:10px;background:var(--bg);border-radius:99px;overflow:hidden;margin:6px 0 3px;border:.5px solid var(--border)}
+.pool-bar-fill{height:100%;background:var(--purple);border-radius:99px;transition:width .5s}
 
 /* ── Table ── */
 .data-table{width:100%;border-collapse:collapse;font-size:14px}
@@ -383,16 +390,46 @@ button:disabled{opacity:.4;cursor:not-allowed}
         <!-- ── RECOMPENSAS ── -->
         <div id="page-recompensas" class="page">
           <h1>Recompensas</h1>
-          <p class="subtitle">O aluno troca Fichas por vantagens reais nas avaliações.</p>
-          <div class="field" style="max-width:300px">
-            <label>Aluno</label>
-            <select id="almo-aluno-select" onchange="atualizarSaldoAlmo()"></select>
+          <p class="subtitle">Recompensas individuais por Fichas, ou recompensas coletivas quando a turma une forças.</p>
+
+          <div class="recomp-tabs">
+            <button class="recomp-tab active" id="rtab-individual" onclick="switchRecompTab('individual')">👤 Individual</button>
+            <button class="recomp-tab" id="rtab-turma" onclick="switchRecompTab('turma')">👥 Turma</button>
           </div>
-          <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
-            <span style="font-size:13px;color:var(--text-muted)">Fichas disponíveis:</span>
-            <span style="font-size:20px;font-weight:500;color:var(--amber)" id="almo-saldo">0</span>
+
+          <!-- Individual -->
+          <div id="recomp-individual">
+            <div class="field" style="max-width:300px">
+              <label>Aluno</label>
+              <select id="almo-aluno-select" onchange="atualizarSaldoAlmo()"></select>
+            </div>
+            <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+              <span style="font-size:13px;color:var(--text-muted)">Fichas do aluno:</span>
+              <span style="font-size:20px;font-weight:500;color:var(--amber)" id="almo-saldo">0</span>
+            </div>
+            <div class="shop-grid" id="shop-grid"></div>
           </div>
-          <div class="shop-grid" id="shop-grid"></div>
+
+          <!-- Turma -->
+          <div id="recomp-turma" style="display:none">
+            <div class="card" style="margin-bottom:1rem">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+                <div>
+                  <div style="font-size:13px;color:var(--text-muted)">Total de Fichas da turma</div>
+                  <div style="font-size:28px;font-weight:500;color:var(--purple)" id="pool-total">0</div>
+                </div>
+                <div style="flex:1;min-width:180px">
+                  <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">Próxima recompensa: <span id="pool-prox-nome">—</span></div>
+                  <div class="pool-bar-bg"><div class="pool-bar-fill" id="pool-bar" style="width:0%"></div></div>
+                  <div style="font-size:11px;color:var(--text-hint)" id="pool-prox-info"></div>
+                </div>
+              </div>
+              <div style="font-size:13px;color:var(--text-muted);background:var(--bg);border-radius:var(--radius);padding:.75rem">
+                💡 Recompensas de turma são desbloqueadas quando a <strong>soma total de Fichas</strong> de todos os alunos atinge o valor necessário. Ao resgatar, o custo é descontado proporcionalmente de cada aluno.
+              </div>
+            </div>
+            <div class="shop-grid" id="shop-grid-turma"></div>
+          </div>
         </div>
 
         <!-- ── GERADOR IA ── -->
@@ -576,6 +613,15 @@ const SHOP_ITEMS = [
   {id:'mentor',  name:'Mentoria individual', desc:'15 min de orientação com o professor', cost:50, icon:'🎓'},
 ];
 
+const SHOP_TURMA_ITEMS = [
+  {id:'consulta',   name:'Prova com consulta',       desc:'Toda a turma faz a prova com documento de consulta elaborado por eles mesmos',                         cost:500, icon:'📄'},
+  {id:'revisao_pre',name:'Revisão pré-prova',        desc:'O professor faz uma revisão completa antes do intervalo — prova aplicada após o intervalo',             cost:400, icon:'📚'},
+  {id:'gabarito2',  name:'2 questões antecipadas',   desc:'A turma recebe 2 questões da prova com antecedência para estudar',                                     cost:600, icon:'🔍'},
+  {id:'multipla',   name:'Questões de múltipla',     desc:'Questões descritivas da prova são convertidas para múltipla escolha',                                  cost:450, icon:'☑'},
+  {id:'peso',       name:'Menor peso de questão',    desc:'A questão de menor nota da turma tem seu peso reduzido na média final',                                 cost:350, icon:'⚖'},
+  {id:'extra',      name:'Aula extra de revisão',    desc:'O professor agenda uma aula extra dedicada apenas a revisar o conteúdo da próxima prova',               cost:300, icon:'🗓'},
+];
+
 // ═══════════════════════════════════════
 // ESTADO
 // ═══════════════════════════════════════
@@ -670,35 +716,13 @@ async function iniciarApp(user){
   currentUser = user;
   try{ document.getElementById('sidebar-email').textContent=user.email; }catch(e){}
   // Carrega dados do Supabase
-try{
-  const {data:t, error:errorTurmas} =
-    await supa.from('turmas').select('*').order('criado_em');
-
-  const {data:a, error:errorAlunos} =
-    await supa.from('alunos').select('*').order('criado_em');
-
-  console.log('TURMAS:', t);
-  console.log('ERRO TURMAS:', errorTurmas);
-
-  console.log('ALUNOS:', a);
-  console.log('ERRO ALUNOS:', errorAlunos);
-
-  if(errorTurmas) throw errorTurmas;
-  if(errorAlunos) throw errorAlunos;
-
-  turmas=t||[];
-  alunos=(a||[]).map(x=>({
-    ...x,
-    log:Array.isArray(x.log)?x.log:[]
-  }));
-
-}catch(e){
-  console.error('ERRO INIT:', e);
-
-  turmas=[];
-  alunos=[];
-  turmaAtivaId=null;
-}
+  try{
+    const {data:t}=await supa.from('turmas').select('*').order('criado_em');
+    const {data:a}=await supa.from('alunos').select('*').order('criado_em');
+    turmas=t||[]; alunos=(a||[]).map(x=>({...x,log:Array.isArray(x.log)?x.log:[]}));
+    const saved=localStorage.getItem('indt_turma_'+user.id);
+    turmaAtivaId=(saved&&turmas.find(t=>t.id===saved))?saved:(turmas[0]?.id||null);
+  }catch(e){ turmas=[];alunos=[];turmaAtivaId=null; }
   // Renderiza UI
   try{ renderCatTabs(); renderEarnGrid(); }catch(e){}
   try{ refreshTudo(); }catch(e){}
@@ -709,23 +733,8 @@ try{
 (async()=>{
   try{
     const {data}=await supa.auth.getSession();
-    const session = data?.session;
-
-if(session?.user?.id){
-  currentUser = session.user;
-
-  const { data: validUser, error } = await supa.auth.getUser();
-
-  if(error || !validUser?.user){
-    await supa.auth.signOut();
-    mostrarAuth();
-    return;
-  }
-
-  await iniciarApp(session.user);
-}else{
-  mostrarAuth();
-}
+    if(data?.session?.user) await iniciarApp(data.session.user);
+    else mostrarAuth();
   }catch(e){ mostrarAuth(); }
 })();
 
@@ -1005,17 +1014,31 @@ async function enviarFeedback(){
 // ═══════════════════════════════════════
 // RECOMPENSAS
 // ═══════════════════════════════════════
+let recompTabAtiva = 'individual';
+
+function switchRecompTab(tab){
+  recompTabAtiva = tab;
+  document.getElementById('rtab-individual').classList.toggle('active', tab==='individual');
+  document.getElementById('rtab-turma').classList.toggle('active', tab==='turma');
+  document.getElementById('recomp-individual').style.display = tab==='individual' ? 'block':'none';
+  document.getElementById('recomp-turma').style.display      = tab==='turma'      ? 'block':'none';
+  if(tab==='turma') renderShopTurma();
+}
+
 function populateAlmoSelect(){
   const lista=turmaAtivaId?getAlunos(turmaAtivaId):[];
   const sel=document.getElementById('almo-aluno-select');
   sel.innerHTML=lista.length?lista.map(a=>`<option value="${a.id}">${a.nome}</option>`).join(''):'<option value="">— sem alunos —</option>';
   atualizarSaldoAlmo();
+  renderShopTurma();
 }
+
 function atualizarSaldoAlmo(){
   const a=getAluno(document.getElementById('almo-aluno-select')?.value);
   document.getElementById('almo-saldo').textContent=a?a.coins:0;
   renderShop();
 }
+
 function renderShop(){
   const a=getAluno(document.getElementById('almo-aluno-select')?.value);
   const coins=a?a.coins:0;
@@ -1027,12 +1050,99 @@ function renderShop(){
       <div class="shop-item-price">${item.cost} fichas</div>
     </div>`).join('');
 }
+
 async function resgatarItem(nome,cost){
   const a=getAluno(document.getElementById('almo-aluno-select')?.value);
   if(!a||a.coins<cost){toast('Fichas insuficientes');return;}
   a.coins-=cost;
   a.log.push({ts:Date.now(),label:'Resgatou: '+nome,pts:'-'+cost+' fichas',type:'spend'});
   await salvarAluno(a); toast(a.nome+' resgatou: '+nome); atualizarSaldoAlmo(); renderTabelaAlunos();
+}
+
+function getPoolTurma(){
+  if(!turmaAtivaId) return 0;
+  return getAlunos(turmaAtivaId).reduce((s,a)=>s+a.coins,0);
+}
+
+function renderShopTurma(){
+  const pool = getPoolTurma();
+  document.getElementById('pool-total').textContent = pool;
+
+  // Próxima recompensa acessível
+  const sorted = [...SHOP_TURMA_ITEMS].sort((a,b)=>a.cost-b.cost);
+  const prox = sorted.find(i=>i.cost>pool) || null;
+  if(prox){
+    document.getElementById('pool-prox-nome').textContent = prox.name;
+    const pct = Math.min(Math.round((pool/prox.cost)*100),100);
+    document.getElementById('pool-bar').style.width = pct+'%';
+    document.getElementById('pool-prox-info').textContent = pool+' / '+prox.cost+' fichas ('+pct+'%)';
+  } else {
+    document.getElementById('pool-prox-nome').textContent = 'Todas desbloqueadas! 🎉';
+    document.getElementById('pool-bar').style.width = '100%';
+    document.getElementById('pool-prox-info').textContent = '';
+  }
+
+  document.getElementById('shop-grid-turma').innerHTML = SHOP_TURMA_ITEMS.map(item=>{
+    const podeResgatar = pool >= item.cost;
+    const lista = turmaAtivaId ? getAlunos(turmaAtivaId) : [];
+    const n = lista.length||1;
+    const pctAtual = Math.min(Math.round((pool/item.cost)*100),100);
+    return `<div class="shop-item turma-item${!podeResgatar?' disabled':''}"
+      onclick="resgatarItemTurma('${item.name.replace(/'/g,"\\'")}',${item.cost})">
+      <div style="font-size:28px;margin-bottom:6px">${item.icon}</div>
+      <div class="shop-item-name">${item.name}</div>
+      <div class="shop-item-desc">${item.desc}</div>
+      <div class="shop-item-price" style="color:var(--purple-text)">${item.cost} fichas da turma</div>
+      ${!podeResgatar?`<div style="margin-top:6px">
+        <div style="height:4px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${pctAtual}%;background:var(--purple);border-radius:99px"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-hint);margin-top:2px">${pool}/${item.cost} (faltam ${item.cost-pool})</div>
+      </div>`:'<div style="margin-top:6px;font-size:11px;font-weight:500;color:var(--teal-text)">✓ Disponível para resgatar</div>'}
+    </div>`;
+  }).join('');
+}
+
+async function resgatarItemTurma(nome, cost){
+  const lista = turmaAtivaId ? getAlunos(turmaAtivaId) : [];
+  if(!lista.length){toast('Nenhum aluno na turma');return;}
+  const pool = getPoolTurma();
+  if(pool < cost){toast('Fichas insuficientes na turma');return;}
+
+  abrirModal('Confirmar resgate da turma',
+    `<p style="font-size:14px;color:var(--text-muted);margin-bottom:8px">
+      Resgatar <strong style="color:var(--text)">${nome}</strong> por <strong style="color:var(--purple)">${cost} fichas</strong>?
+    </p>
+    <p style="font-size:13px;color:var(--text-muted)">
+      O custo será descontado proporcionalmente de cada aluno.<br>
+      Pool atual: <strong>${pool}</strong> fichas &nbsp;·&nbsp; ${lista.length} alunos
+    </p>`,
+    `<button onclick="fecharModal()">Cancelar</button>
+     <button class="btn-primary" onclick="executarResgateTurma('${nome.replace(/'/g,"\\'")}',${cost})">Confirmar resgate</button>`
+  );
+}
+
+async function executarResgateTurma(nome, cost){
+  fecharModal();
+  const lista = turmaAtivaId ? getAlunos(turmaAtivaId) : [];
+  if(!lista.length) return;
+  const pool = getPoolTurma();
+  if(pool < cost){toast('Fichas insuficientes');return;}
+
+  // Desconta proporcionalmente de cada aluno
+  const totalCoins = pool;
+  for(const a of lista){
+    if(a.coins <= 0) continue;
+    const proporcao = a.coins / totalCoins;
+    const desconto = Math.min(a.coins, Math.ceil(cost * proporcao));
+    a.coins = Math.max(0, a.coins - desconto);
+    a.log.push({ts:Date.now(), label:'[Turma] Resgatou: '+nome, pts:'-'+desconto+' fichas', type:'spend'});
+    await salvarAluno(a);
+  }
+
+  toast('🎉 Turma resgatou: '+nome+'!');
+  renderShopTurma();
+  renderTabelaAlunos();
 }
 
 // ═══════════════════════════════════════
